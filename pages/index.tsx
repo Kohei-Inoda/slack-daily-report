@@ -78,7 +78,7 @@ ${form.nextGoals}
   function generateTimeOptions(): string[] {
     const options: string[] = [];
     for (let h = 10; h <= 19; h++) {
-      for (let m of [0, 30]) {
+      for (const m of [0, 30]) {
         if (h === 19 && m > 0) continue;
         const time = `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
         options.push(time);
