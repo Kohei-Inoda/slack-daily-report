@@ -2,6 +2,21 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const SLACK_API_BASE = 'https://slack.com/api';
 
+interface SlackMessage {
+  text: string;
+  ts: string;
+}
+
+interface SlackHistoryResponse {
+  ok: boolean;
+  messages: SlackMessage[];
+}
+
+interface SlackPostMessageResponse {
+  ok: boolean;
+  ts: string;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -14,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  // ステップ1: メッセージ履歴を取得
+  // ステップ1: チャンネルのメッセージ履歴を取得
   const historyRes = await fetch(`${SLACK_API_BASE}/conversations.history`, {
     method: 'POST',
     headers: {
@@ -27,23 +42,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }),
   });
 
-  const historyJson = await historyRes.json();
+  const historyJson = (await historyRes.json()) as SlackHistoryResponse;
 
   if (!historyJson.ok) {
     return res.status(500).json({ error: 'Failed to fetch channel history' });
   }
 
-  // ステップ2: 「📅 5/27」などのメッセージを探す
-  let parentTs = null;
-  const datePattern = new RegExp(`\\b${dateLabel}\\b`); // "5/27" など
-  const existing = historyJson.messages.find((msg: any) =>
-    msg.text.includes('日報') && datePattern.test(msg.text)
+  // ステップ2: 「📅 5/27 日報」などのメッセージを探す
+  const datePattern = new RegExp(`\\b${dateLabel}\\b`);
+  const existing = historyJson.messages.find(
+    (msg) => msg.text.includes('日報') && datePattern.test(msg.text)
   );
+
+  let parentTs: string;
 
   if (existing) {
     parentTs = existing.ts;
   } else {
-    // ステップ3: なければ親メッセージを投稿
+    // ステップ3: 親メッセージを投稿
     const parentRes = await fetch(`${SLACK_API_BASE}/chat.postMessage`, {
       method: 'POST',
       headers: {
@@ -56,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }),
     });
 
-    const parentJson = await parentRes.json();
+    const parentJson = (await parentRes.json()) as SlackPostMessageResponse;
 
     if (!parentJson.ok) {
       return res.status(500).json({ error: 'Failed to post parent message' });
@@ -65,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     parentTs = parentJson.ts;
   }
 
-  // ステップ4: 日報をスレッド返信として投稿
+  // ステップ4: スレッド返信として日報を投稿
   const replyRes = await fetch(`${SLACK_API_BASE}/chat.postMessage`, {
     method: 'POST',
     headers: {
@@ -79,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }),
   });
 
-  const replyJson = await replyRes.json();
+  const replyJson = (await replyRes.json()) as SlackPostMessageResponse;
 
   if (!replyJson.ok) {
     return res.status(500).json({ error: 'Failed to post daily report' });
