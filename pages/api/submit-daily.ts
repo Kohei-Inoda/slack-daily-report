@@ -1,4 +1,3 @@
-// pages/api/submit-daily.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const SLACK_API_BASE = 'https://slack.com/api';
@@ -9,6 +8,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { dateLabel, text } = req.body;
+  
+  if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
+    console.error("Slack環境変数が未設定です");
+    return res.status(500).json({ error: "Slack設定が未構成です（管理者に連絡してください）" });
+  }
+  
   const token = process.env.SLACK_BOT_TOKEN;
   const channel = process.env.SLACK_CHANNEL_ID;
 
@@ -17,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const historyRes = await fetch(`${SLACK_API_BASE}/conversations.history`, {
-    method: 'POST',
+    method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
