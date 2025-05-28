@@ -19,22 +19,26 @@ export default function Home() {
     setForm((prev) => ({ ...prev, date: formatted }));
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async () => {
-    // バリデーション：時間順
-    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
-      alert("⚠️ 終業時間は始業時間より後に設定してください。");
-      return;
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 10; hour <= 19; hour++) {
+      for (let min of [0, 30]) {
+        if (hour === 19 && min > 0) continue;
+        const hh = String(hour).padStart(2, "0");
+        const mm = String(min).padStart(2, "0");
+        options.push(`${hh}:${mm}`);
+      }
     }
+    return options;
+  };
 
-    // フィールド未入力チェック（任意で追加）
-    if (!form.name || !form.startTime || !form.endTime) {
-      alert("⚠️ 名前・勤務時間をすべて入力してください。");
+  const handleSubmit = async () => {
+    if (form.endTime <= form.startTime) {
+      alert("終了時刻は開始時刻より後にしてください。");
       return;
     }
 
@@ -65,7 +69,6 @@ ${form.nextGoals}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        channel: process.env.NEXT_PUBLIC_SLACK_CHANNEL_ID,
         dateLabel: form.date,
         text: message,
       }),
@@ -75,164 +78,101 @@ ${form.nextGoals}
     alert(result.success ? "✅ 送信完了！" : `❌ 送信失敗：${result.error}`);
   };
 
-  function generateTimeOptions(): string[] {
-    const options: string[] = [];
-    for (let h = 10; h <= 19; h++) {
-      for (const m of [0, 30]) {
-        if (h === 19 && m > 0) continue;
-        const time = `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
-        options.push(time);
-      }
-    }
-    return options;
-  }
-
   return (
     <div style={{ backgroundColor: "#f9fafb", minHeight: "100vh", padding: "2rem" }}>
-      <div
-        style={{
-          maxWidth: "600px",
-          margin: "0 auto",
-          backgroundColor: "#fff",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          padding: "2rem",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: "bold",
-            marginBottom: "1.5rem",
-            textAlign: "center",
-          }}
-        >
+      <div style={{
+        maxWidth: "600px",
+        margin: "0 auto",
+        backgroundColor: "#fff",
+        borderRadius: "12px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        padding: "2rem"
+      }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1.5rem", textAlign: "center" }}>
           📋 日報入力フォーム
         </h1>
 
-        {/* 📅 日付 */}
+        {/* 日付 */}
         <div style={{ marginBottom: "1rem" }}>
-            <label style={{ fontWeight: "600", display: "block", marginBottom: "0.25rem" }}>
-                📅 日付
-            </label>
-            <input
-                name="date"
-                value={form.date}
-                readOnly
-                style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "0.95rem",
-                }}
-            />
-            </div>
+          <label style={{ fontWeight: "600", display: "block", marginBottom: "0.25rem" }}>📅 日付</label>
+          <input
+            name="date"
+            value={form.date}
+            readOnly
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              fontSize: "0.95rem"
+            }}
+          />
+        </div>
 
-        {/* 勤務時間（開始〜終了） */}
+        {/* 勤務時間 */}
         <div style={{ marginBottom: "1rem" }}>
-          <label style={{ fontWeight: "600", display: "block", marginBottom: "0.25rem" }}>
-            🕒 本日の勤務時間
-          </label>
+          <label style={{ fontWeight: "600", display: "block", marginBottom: "0.25rem" }}>🕒 本日の勤務時間</label>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <select
-              name="startTime"
-              value={form.startTime}
-              onChange={handleChange}
-              style={{
-                flex: 1,
-                padding: "0.5rem",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "0.95rem",
-              }}
-            >
-              <option value="">始業時間</option>
-              {generateTimeOptions().map((time) => (
-                <option key={time} value={time}>
-                  {time}
-                </option>
+            <select name="startTime" value={form.startTime} onChange={handleChange} style={{ flex: 1, padding: "0.5rem" }}>
+              <option value="">開始</option>
+              {generateTimeOptions().map((opt) => (
+                <option key={`start-${opt}`} value={opt}>{opt}</option>
               ))}
             </select>
-
-            <span style={{ alignSelf: "center" }}>〜</span>
-
-            <select
-              name="endTime"
-              value={form.endTime}
-              onChange={handleChange}
-              style={{
-                flex: 1,
-                padding: "0.5rem",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "0.95rem",
-              }}
-            >
-              <option value="">終業時間</option>
-              {generateTimeOptions()
-                .filter((t) => !form.startTime || t > form.startTime)
-                .map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
+            <span style={{ lineHeight: "2.5rem" }}>〜</span>
+            <select name="endTime" value={form.endTime} onChange={handleChange} style={{ flex: 1, padding: "0.5rem" }}>
+              <option value="">終了</option>
+              {generateTimeOptions().map((opt) => (
+                <option key={`end-${opt}`} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* その他の入力フィールド */}
-        {[
-          ["名前", "name"],
-          ["✅ 今日の実績", "achievements", false, true],
-          ["📈 成果・進捗状況", "progress", false, true],
-          ["💡 今日の学び・気づき", "learning", false, true],
-          ["⚠️ 改善点", "improvements", false, true],
-          ["🚀 次回の目標・質問", "nextGoals", false, true],
-        ].map(([label, name, readonly, isTextarea]) => (
-          <div key={name as string} style={{ marginBottom: "1rem" }}>
-            <label
-              style={{
-                fontWeight: "600",
-                display: "block",
-                marginBottom: "0.25rem",
-              }}
-            >
-              {label}
-            </label>
+        {/* 名前 */}
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ fontWeight: "600", display: "block", marginBottom: "0.25rem" }}>名前</label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              fontSize: "0.95rem"
+            }}
+          />
+        </div>
 
-            {isTextarea ? (
-              <textarea
-                name={name as string}
-                rows={3}
-                value={form[name as keyof typeof form]}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "1px solid #ccc",
-                  borderRadius: "6px",
-                  fontSize: "0.95rem",
-                }}
-              />
-            ) : (
-              <input
-                name={name as string}
-                value={form[name as keyof typeof form]}
-                onChange={handleChange}
-                readOnly={!!readonly}
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
-                  border: "1px solid #ccc",
-                  borderRadius: "6px",
-                  fontSize: "0.95rem",
-                }}
-              />
-            )}
+        {/* テキストエリア一覧 */}
+        {[
+          ["✅ 今日の実績", "achievements"],
+          ["📈 成果・進捗状況", "progress"],
+          ["💡 今日の学び・気づき", "learning"],
+          ["⚠️ 改善点", "improvements"],
+          ["🚀 次回の目標・質問", "nextGoals"],
+        ].map(([label, name]) => (
+          <div key={name} style={{ marginBottom: "1rem" }}>
+            <label style={{ fontWeight: "600", display: "block", marginBottom: "0.25rem" }}>{label}</label>
+            <textarea
+              name={name}
+              value={form[name as keyof typeof form]}
+              onChange={handleChange}
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                fontSize: "0.95rem"
+              }}
+            />
           </div>
         ))}
 
+        {/* Submit */}
         <button
           onClick={handleSubmit}
           style={{
@@ -245,7 +185,7 @@ ${form.nextGoals}
             border: "none",
             cursor: "pointer",
             fontSize: "1rem",
-            marginTop: "1rem",
+            marginTop: "1rem"
           }}
         >
           🚀 Slackに送信
