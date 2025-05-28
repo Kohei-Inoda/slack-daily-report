@@ -21,17 +21,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const historyRes = await fetch(`${SLACK_API_BASE}/conversations.history`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      channel,
-      limit: 100,
-    }),
-  });
+// 🔁 修正：conversations.history を GET + クエリパラメータに変更
+const historyRes = await fetch(
+    `${SLACK_API_BASE}/conversations.history?channel=${channel}&limit=100`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  
 
   const historyJson = await historyRes.json();
 
