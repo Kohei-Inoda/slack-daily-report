@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const token = process.env.SLACK_BOT_TOKEN;
   const channel = process.env.SLACK_CHANNEL_ID;
 
-  if (!token || !channel || !dateLabel || !text) {
+  if (!dateLabel || !text) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
