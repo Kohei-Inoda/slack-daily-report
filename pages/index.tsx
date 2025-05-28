@@ -26,7 +26,7 @@ export default function Home() {
   const generateTimeOptions = () => {
     const options = [];
     for (let hour = 10; hour <= 19; hour++) {
-      for (let min of [0, 30]) {
+      for (const min of [0, 30]) {
         if (hour === 19 && min > 0) continue;
         const hh = String(hour).padStart(2, "0");
         const mm = String(min).padStart(2, "0");

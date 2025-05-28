@@ -37,9 +37,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const datePattern = new RegExp(`\\b${dateLabel}\\b`);
   let parentTs = null;
-  const existing = historyJson.messages.find(
-    (msg: any) => msg.text.includes('日報') && datePattern.test(msg.text)
+  type SlackMessage = { text: string; ts: string };
+  const existing = (historyJson.messages as SlackMessage[]).find(
+    (msg) => msg.text.includes('日報') && datePattern.test(msg.text)
   );
+  
 
   if (existing) {
     parentTs = existing.ts;
